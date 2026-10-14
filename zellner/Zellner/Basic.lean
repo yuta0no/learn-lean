@@ -1,0 +1,143 @@
+/-
+Copyright (c) 2026 Yuta Ono. All rights reserved.
+Authors: Yuta Ono
+-/
+import Mathlib
+
+/-! formalization of Theorem 1 in https://arxiv.org/abs/1904.02063 -/
+
+open MeasureTheory Real
+
+variable {Θ : Type*} [MeasureSpace Θ]
+
+-- q is a probability density function
+structure IsDensity (q : Θ → ℝ) : Prop where
+  meas   : Measurable q
+  nonneg : ∀ θ, 0 ≤ q θ
+  int    : Integrable q
+  one    : ∫ θ, q θ = 1
+
+-- KL divergence: ∫ q log(q/p)
+noncomputable def kl (q p : Θ → ℝ) : ℝ := ∫ θ, q θ * log (q θ / p θ)
+
+structure Admissible (p₀ L q : Θ → ℝ) : Prop where
+  dens  : IsDensity q
+  supp  : ∀ᵐ θ, p₀ θ = 0 → q θ = 0
+  intL  : Integrable (fun θ ↦ q θ * L θ)
+  intKL : Integrable (fun θ ↦ q θ * log (q θ / p₀ θ))
+
+noncomputable def objective (p₀ L q : Θ → ℝ) : ℝ :=
+  (∫ θ, q θ * L θ) + kl q p₀
+
+noncomputable def Z (p₀ L : Θ → ℝ) : ℝ := ∫ θ, p₀ θ * exp (-L θ)
+noncomputable def qB (p₀ L : Θ → ℝ) (θ : Θ) : ℝ := p₀ θ * exp (-L θ) / Z p₀ L
+
+/-! 1. Pointwise inequalities for real numbers -/
+
+lemma sub_le_mul_log_div {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 < a → 0 < b) :
+    a - b ≤ a * log (a / b) := by
+  sorry
+
+lemma mul_log_div_eq_sub_iff {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 < a → 0 < b) :
+    a * log (a / b) = a - b ↔ a = b := by
+  sorry
+
+
+/-! 2. Gibbs's inequality on pdf -/
+
+/-- lemma : KL(q || q) = 0 -/
+lemma kl_self (q : Θ → ℝ) : kl q q = 0 := by
+  sorry
+
+/-- KL(q || r) = ∫ (q log (q/r) - q + r) -/
+lemma kl_eq_integral_gibbs {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity r)
+    (hint : Integrable (fun θ ↦ q θ * log (q θ / r θ))) :
+    kl q r = ∫ θ, (q θ * log (q θ / r θ) - q θ + r θ) := by
+  sorry
+
+/-- lemma : KL(q || r) ≥ 0 -/
+lemma kl_nonneg {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity r)
+    (hsupp : ∀ᵐ θ, 0 < q θ → 0 < r θ)
+    (hint : Integrable (fun θ ↦ q θ * log (q θ / r θ))) :
+    0 ≤ kl q r := by
+  sorry
+
+/-- lemma: KL(q || r) = 0 → q = r (a.e.) -/
+lemma ae_eq_of_kl_eq_zero {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity r)
+    (hsupp : ∀ᵐ θ, 0 < q θ → 0 < r θ)
+    (hint : Integrable (fun θ ↦ q θ * log (q θ / r θ)))
+    (h : kl q r = 0) :
+    q =ᵐ[volume] r := by
+  sorry
+
+
+/-! 3. Normalizing constant Z -/
+
+lemma integrable_Z_integrand {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+    Integrable (fun θ ↦ p₀ θ * exp (-L θ)) := by
+  sorry
+
+lemma Z_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+    0 < Z p₀ L := by
+  sorry
+
+
+/-! 4. Generalized posterior qB -/
+
+lemma qB_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) {θ : Θ} (hθ : 0 < p₀ θ) :
+    0 < qB p₀ L θ := by
+  sorry
+
+lemma supp_qB {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
+    ∀ᵐ θ, 0 < q θ → 0 < qB p₀ L θ := by
+  sorry
+
+lemma isDensity_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+    IsDensity (qB p₀ L) := by
+  sorry
+
+lemma mul_log_div_qB_p₀ {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (θ : Θ) :
+    qB p₀ L θ * log (qB p₀ L θ / p₀ θ) = qB p₀ L θ * (-L θ - log (Z p₀ L)) := by
+  sorry
+
+lemma admissible_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+    Admissible p₀ L (qB p₀ L) := by
+  sorry
+
+
+/-! 5. Key identities -/
+
+lemma mul_log_div_qB_ae {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
+    (fun θ ↦ q θ * log (q θ / qB p₀ L θ)) =ᵐ[volume]
+      fun θ ↦ q θ * log (q θ / p₀ θ) + q θ * L θ + q θ * log (Z p₀ L) := by
+  sorry
+
+lemma integrable_mul_log_div_qB {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
+    Integrable (fun θ ↦ q θ * log (q θ / qB p₀ L θ)) := by
+  sorry
+
+lemma objective_eq {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
+    objective p₀ L q = kl q (qB p₀ L) - log (Z p₀ L) := by
+  sorry
+
+
+/-! Main theorem -/
+
+theorem gibbs_variational_density
+    (p₀ L : Θ → ℝ) (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+    Admissible p₀ L (qB p₀ L) ∧
+    (∀ q, Admissible p₀ L q → objective p₀ L (qB p₀ L) ≤ objective p₀ L q) ∧
+    (∀ q, Admissible p₀ L q →
+        objective p₀ L q = objective p₀ L (qB p₀ L) → q =ᵐ[volume] qB p₀ L) := by
+  sorry
