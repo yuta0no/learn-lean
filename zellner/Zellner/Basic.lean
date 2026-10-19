@@ -163,8 +163,24 @@ lemma integrable_Z_integrand {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
 lemma Z_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
     0 < Z p₀ L := by
-  sorry
-
+  have hint := integrable_Z_integrand hp₀ hL hL0
+  have hnonneg : ∀ᵐ θ, 0 ≤ p₀ θ * exp (-L θ) :=
+    Filter.Eventually.of_forall fun θ ↦ mul_nonneg (hp₀.nonneg θ) (exp_pos _).le
+  have hZ0 : 0 ≤ Z p₀ L := integral_nonneg_of_ae hnonneg
+  rcases hZ0.eq_or_lt with h0 | hpos
+  · -- case Z = 0; derive a contradiction
+    exfalso
+    have hzero : (fun θ ↦ p₀ θ * exp (-L θ)) =ᵐ[volume] 0 :=
+      (integral_eq_zero_iff_of_nonneg_ae hnonneg hint).mp h0.symm
+    have hp0 : p₀ =ᵐ[volume] 0 := by
+      filter_upwards [hzero] with θ hθ
+      have h1 : p₀ θ * exp (-L θ) = 0 := hθ
+      exact (mul_eq_zero.mp h1).resolve_right (exp_pos _).ne'
+    have hone := hp₀.one
+    rw [integral_congr_ae hp0] at hone
+    simp at hone  -- 0 = 1; contradiction
+  · --case Z > 0
+    exact hpos
 
 /-! 4. Generalized posterior qB -/
 
