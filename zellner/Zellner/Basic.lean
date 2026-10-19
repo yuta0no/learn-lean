@@ -110,7 +110,12 @@ lemma kl_nonneg {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity r)
     (hsupp : ∀ᵐ θ, 0 < q θ → 0 < r θ)
     (hint : Integrable (fun θ ↦ q θ * log (q θ / r θ))) :
     0 ≤ kl q r := by
-  sorry
+  rw [kl_eq_integral_gibbs hq hr hint]
+  have h0 : ∀ᵐ θ, 0 ≤ q θ * log (q θ / r θ) - q θ + r θ := by
+    filter_upwards [hsupp] with θ hθ
+    have := sub_le_mul_log_div (hq.nonneg θ) (hr.nonneg θ) hθ
+    linarith
+  exact integral_nonneg_of_ae h0
 
 /-- lemma: KL(q || r) = 0 → q = r (a.e.) -/
 lemma ae_eq_of_kl_eq_zero {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity r)
