@@ -1,7 +1,3 @@
-/-
-Copyright (c) 2026 Yuta Ono. All rights reserved.
-Authors: Yuta Ono
--/
 import Mathlib
 
 /-! formalization of Theorem 1 in https://arxiv.org/abs/1904.02063 -/
@@ -10,14 +6,16 @@ open MeasureTheory Real
 
 variable {Θ : Type*} [MeasureSpace Θ]
 
--- q is a probability density function
+/-- `q` is a probability density function -/
 structure IsDensity (q : Θ → ℝ) : Prop where
   meas   : Measurable q
   nonneg : ∀ θ, 0 ≤ q θ
   int    : Integrable q
   one    : ∫ θ, q θ = 1
 
--- KL divergence: ∫ q log(q/p)
+/-- KL divergence: ∫ q log(q/p)
+
+Note that Lean's conventions `log 0 = 0` and `x / 0 = 0` are used, so this is only meaningful when `q = 0` almost everywhere on `{p = 0}`.-/
 noncomputable def kl (q p : Θ → ℝ) : ℝ := ∫ θ, q θ * log (q θ / p θ)
 
 structure Admissible (p₀ L q : Θ → ℝ) : Prop where
@@ -133,11 +131,27 @@ lemma objective_eq {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
 
 /-! Main theorem -/
 
-theorem gibbs_variational_density
+theorem gibbs_bayes_density
     (p₀ L : Θ → ℝ) (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
     Admissible p₀ L (qB p₀ L) ∧
     (∀ q, Admissible p₀ L q → objective p₀ L (qB p₀ L) ≤ objective p₀ L q) ∧
-    (∀ q, Admissible p₀ L q →
-        objective p₀ L q = objective p₀ L (qB p₀ L) → q =ᵐ[volume] qB p₀ L) := by
-  sorry
+    (∀ q, Admissible p₀ L q → objective p₀ L q = objective p₀ L (qB p₀ L) →
+      q =ᵐ[volume] qB p₀ L) := by
+  have hB : Admissible p₀ L (qB p₀ L) := admissible_qB hp₀ hL hL0
+  have hobjB : objective p₀ L (qB p₀ L) = -log (Z p₀ L) := by
+    rw [objective_eq hp₀ hL hL0 hB, kl_self, zero_sub]
+  -- achieve the first goal
+  refine ⟨hB, ?_, ?_⟩
+  · -- optimality of q = qB: objective q = kl q qB - log Z ≥ kl qB qB - log Z = - log Z
+    intro q hq
+    rw [hobjB, objective_eq hp₀ hL hL0 hq]
+    have hkl := kl_nonneg hq.dens (isDensity_qB hp₀ hL hL0)
+      (supp_qB hp₀ hL hL0 hq) (integrable_mul_log_div_qB hp₀ hL hL0 hq)
+    linarith
+  · -- uniqueness of optimal q
+    intro q hq heq
+    rw [hobjB, objective_eq hp₀ hL hL0 hq] at heq
+    apply ae_eq_of_kl_eq_zero hq.dens (isDensity_qB hp₀ hL hL0)
+      (supp_qB hp₀ hL hL0 hq) (integrable_mul_log_div_qB hp₀ hL hL0 hq)
+    linarith
