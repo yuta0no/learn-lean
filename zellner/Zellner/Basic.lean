@@ -101,7 +101,9 @@ lemma kl_self (q : Θ → ℝ) : kl q q = 0 := by
 lemma kl_eq_integral_gibbs {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity r)
     (hint : Integrable (fun θ ↦ q θ * log (q θ / r θ))) :
     kl q r = ∫ θ, (q θ * log (q θ / r θ) - q θ + r θ) := by
-  sorry
+  have h1 : Integrable (fun θ ↦ q θ * log (q θ / r θ) - q θ) := hint.sub hq.int
+  rw [integral_add h1 hr.int, integral_sub hint hq.int, hq.one, hr.one, kl]
+  norm_num
 
 /-- lemma : KL(q || r) ≥ 0 -/
 lemma kl_nonneg {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity r)
