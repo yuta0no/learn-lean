@@ -122,8 +122,20 @@ lemma ae_eq_of_kl_eq_zero {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity 
     (hsupp : ∀ᵐ θ, 0 < q θ → 0 < r θ)
     (hint : Integrable (fun θ ↦ q θ * log (q θ / r θ)))
     (h : kl q r = 0) :
-    q =ᵐ[volume] r := by
-  sorry
+    ∀ᵐ θ, q θ = r θ := by
+  rw [kl_eq_integral_gibbs hq hr hint] at h
+  have hnonneg : ∀ᵐ θ, 0 ≤ q θ * log (q θ / r θ) - q θ + r θ := by
+    filter_upwards [hsupp] with θ hθ
+    have := sub_le_mul_log_div (hq.nonneg θ) (hr.nonneg θ) hθ
+    linarith
+  have hgi : Integrable (fun θ ↦ q θ * log (q θ / r θ) - q θ + r θ) :=
+    (hint.sub hq.int).add hr.int
+  have hzero : (fun θ ↦ q θ * log (q θ / r θ) - q θ + r θ) =ᵐ[volume] 0 :=
+    (integral_eq_zero_iff_of_nonneg_ae hnonneg hgi).mp h
+  filter_upwards [hzero, hsupp] with θ hθ0 hθs
+  have h1 : q θ * log (q θ / r θ) - q θ + r θ = 0 := hθ0
+  have h2 : q θ * log (q θ / r θ) = q θ - r θ := by linarith
+  exact (mul_log_div_eq_sub_iff (hq.nonneg θ) (hr.nonneg θ) hθs).mp h2
 
 
 /-! 3. Normalizing constant Z -/
@@ -194,7 +206,7 @@ theorem gibbs_bayes_density
     Admissible p₀ L (qB p₀ L) ∧
     (∀ q, Admissible p₀ L q → objective p₀ L (qB p₀ L) ≤ objective p₀ L q) ∧
     (∀ q, Admissible p₀ L q → objective p₀ L q = objective p₀ L (qB p₀ L) →
-      q =ᵐ[volume] qB p₀ L) := by
+      ∀ᵐ θ, q θ = qB p₀ L θ) := by
   have hB : Admissible p₀ L (qB p₀ L) := admissible_qB hp₀ hL hL0
   have hobjB : objective p₀ L (qB p₀ L) = -log (Z p₀ L) := by
     rw [objective_eq hp₀ hL hL0 hB, kl_self, zero_sub]
