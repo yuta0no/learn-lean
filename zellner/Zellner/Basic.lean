@@ -95,7 +95,12 @@ lemma mul_log_div_eq_sub_iff {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 < 
 
 /-- lemma : KL(q || q) = 0 -/
 lemma kl_self (q : Θ → ℝ) : kl q q = 0 := by
-  sorry
+  have h : ∀ θ, q θ * log (q θ / q θ) = 0 := by
+    intro θ
+    by_cases hq : q θ = 0
+    · simp [hq]  -- 0 * log (0 / 0) = 0 in Lean
+    · rw [div_self hq, Real.log_one, mul_zero]  -- q θ * log 1 = 0
+  simp [kl]
 
 /-- KL(q || r) = ∫ (q log (q/r) - q + r) -/
 lemma kl_eq_integral_gibbs {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity r)
