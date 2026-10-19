@@ -15,7 +15,8 @@ structure IsDensity (q : Θ → ℝ) : Prop where
 
 /-- KL divergence: ∫ q log(q/p)
 
-Note that Lean's conventions `log 0 = 0` and `x / 0 = 0` are used, so this is only meaningful when `q = 0` almost everywhere on `{p = 0}`.-/
+Note that Lean's conventions `log 0 = 0` and `x / 0 = 0` are used,
+so this is only meaningful when `q = 0` almost everywhere on `{p = 0}`. -/
 noncomputable def kl (q p : Θ → ℝ) : ℝ := ∫ θ, q θ * log (q θ / p θ)
 
 structure Admissible (p₀ L q : Θ → ℝ) : Prop where
@@ -54,7 +55,40 @@ lemma sub_le_mul_log_div {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 < a �
 
 lemma mul_log_div_eq_sub_iff {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 < a → 0 < b) :
     a * log (a / b) = a - b ↔ a = b := by
-  sorry
+  constructor
+  · -- proof for (→)
+    intro heq
+    rcases ha.eq_or_lt with ha0 | hapos
+    · -- case: a = 0
+      rw [← ha0] at heq
+      simp at heq
+      linarith
+    · -- case: a > 0
+      have hbpos := h hapos
+      by_contra hne
+      have hx : b / a ≠ 1 := by
+        intro hba
+        apply hne
+        exact ((div_eq_one_iff_eq hapos.ne').mp hba).symm
+      have h1 : log (b / a) < b / a - 1 :=
+        Real.log_lt_sub_one_of_pos (div_pos hbpos hapos) hx
+      have hlt : a - b < a * log (a / b) := by
+        calc
+          a - b = -(a * (b / a - 1)) := by field_simp; ring
+          _ < -(a * log (b / a)) := by
+            have := mul_lt_mul_of_pos_left h1 hapos
+            linarith
+          _ = a * log (a / b) := by
+            rw [Real.log_div hbpos.ne' hapos.ne', Real.log_div hapos.ne' hbpos.ne']
+            ring
+      -- a - b < a * log (a / b) = a - b (∵ hlt, heq)
+      linarith
+  · -- proof for (←)
+    intro hab
+    rw [hab]
+    by_cases hb0 : b = 0
+    · simp [hb0]
+    · rw [div_self hb0, Real.log_one, mul_zero, sub_self]
 
 
 /-! 2. Gibbs's inequality on pdf -/
