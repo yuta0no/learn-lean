@@ -143,7 +143,22 @@ lemma ae_eq_of_kl_eq_zero {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity 
 lemma integrable_Z_integrand {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
     Integrable (fun θ ↦ p₀ θ * exp (-L θ)) := by
-  sorry
+  have hupper : ∀ θ, p₀ θ * exp (-L θ) ≤ p₀ θ := by
+    intro θ
+    calc p₀ θ * exp (-L θ)
+    _ ≤ p₀ θ * 1 := by
+      have hexp : exp (-L θ) ≤ 1 := Real.exp_le_one_iff.mpr (neg_nonpos.mpr (hL0 θ))
+      exact mul_le_mul_of_nonneg_left hexp (hp₀.nonneg θ)
+    _ = p₀ θ := by norm_num
+  refine hp₀.int.mono ?_ ?_
+  · -- measurability
+    exact (hp₀.meas.mul hL.neg.exp).aestronglyMeasurable
+  · -- norm evaluation
+    refine Filter.Eventually.of_forall (fun θ ↦ ?_)
+    change ‖p₀ θ * exp (-L θ)‖ ≤ ‖p₀ θ‖
+    have h0 : 0 ≤ p₀ θ * exp (-L θ) := mul_nonneg (hp₀.nonneg θ) (exp_pos _).le
+    rw [Real.norm_of_nonneg h0, Real.norm_of_nonneg (hp₀.nonneg θ)]
+    exact hupper θ
 
 lemma Z_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
