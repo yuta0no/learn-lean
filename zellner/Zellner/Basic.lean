@@ -34,7 +34,23 @@ noncomputable def qB (p₀ L : Θ → ℝ) (θ : Θ) : ℝ := p₀ θ * exp (-L 
 
 lemma sub_le_mul_log_div {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 < a → 0 < b) :
     a - b ≤ a * log (a / b) := by
-  sorry
+  rcases ha.eq_or_lt with ha0 | hapos
+  · -- case: a = 0
+    rw [← ha0]
+    simpa using hb
+  · -- case: a > 0
+    have hbpos : 0 < b := h hapos
+    have h1 : log (b / a) ≤ b / a - 1 :=
+      Real.log_le_sub_one_of_pos (div_pos hbpos hapos)
+    calc
+      a - b = -(a * (b / a - 1)) := by field_simp; ring
+      _ ≤ -(a * log (b / a)) := by
+        have := mul_le_mul_of_nonneg_left h1 ha
+        linarith
+      _ = a * log (a / b) := by
+        rw [Real.log_div hbpos.ne' hapos.ne', Real.log_div hapos.ne' hbpos.ne']
+        ring
+
 
 lemma mul_log_div_eq_sub_iff {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 < a → 0 < b) :
     a * log (a / b) = a - b ↔ a = b := by
