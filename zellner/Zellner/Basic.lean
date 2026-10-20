@@ -224,10 +224,10 @@ lemma isDensity_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     positivity
   int := (integrable_Z_integrand hp₀ hL hL0).div_const _
   one := by
-   have hZ := Z_pos hp₀ hL hL0
-   unfold qB
-   rw [integral_div, div_eq_one_iff_eq hZ.ne']
-   rfl
+    have hZ := Z_pos hp₀ hL hL0
+    unfold qB
+    rw [integral_div, div_eq_one_iff_eq hZ.ne']
+    rfl
 
 lemma mul_log_div_qB_p₀ {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (θ : Θ) :
