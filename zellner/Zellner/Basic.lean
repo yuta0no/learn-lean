@@ -214,8 +214,20 @@ lemma supp_qB {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
 
 lemma isDensity_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
-    IsDensity (qB p₀ L) := by
-  sorry
+    IsDensity (qB p₀ L) where
+  meas := (hp₀.meas.mul hL.neg.exp).div_const _
+  nonneg := by
+    intro θ
+    have hZ : 0 < Z p₀ L := Z_pos hp₀ hL hL0
+    have hp : 0 ≤ p₀ θ := hp₀.nonneg θ
+    unfold qB
+    positivity
+  int := (integrable_Z_integrand hp₀ hL hL0).div_const _
+  one := by
+   have hZ := Z_pos hp₀ hL hL0
+   unfold qB
+   rw [integral_div, div_eq_one_iff_eq hZ.ne']
+   rfl
 
 lemma mul_log_div_qB_p₀ {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (θ : Θ) :
