@@ -202,7 +202,15 @@ lemma qB_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
 lemma supp_qB {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
     ∀ᵐ θ, 0 < q θ → 0 < qB p₀ L θ := by
-  sorry
+  filter_upwards [hq.supp] with θ hθs
+  intro hqpos
+  have hθ : 0 < p₀ θ := by
+    rcases (hp₀.nonneg θ).eq_or_lt with hp0 | hppos
+    · -- case p₀ = 0
+      apply absurd (hθs hp0.symm) hqpos.ne'
+    · -- case p₀ > 0
+      exact hppos
+  exact qB_pos hp₀ hL hL0 hθ
 
 lemma isDensity_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
