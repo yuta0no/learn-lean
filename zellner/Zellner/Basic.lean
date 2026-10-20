@@ -232,7 +232,26 @@ lemma isDensity_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
 lemma mul_log_div_qB_p₀ {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (θ : Θ) :
     qB p₀ L θ * log (qB p₀ L θ / p₀ θ) = qB p₀ L θ * (-L θ - log (Z p₀ L)) := by
-  sorry
+  rcases (hp₀.nonneg θ).eq_or_lt with hp0 | hppos
+  · -- case p₀ = 0
+    unfold qB
+    rw [← hp0]
+    norm_num
+  -- case p₀ > 0
+  have hZ := Z_pos hp₀ hL hL0
+  have hqB := qB_pos hp₀ hL hL0 hppos
+  calc
+    qB p₀ L θ * log (qB p₀ L θ / p₀ θ)
+    _ = qB p₀ L θ * log (qB p₀ L θ) - qB p₀ L θ * log (p₀ θ) := by
+      rw [log_div hqB.ne' hppos.ne']
+      ring
+    _ = qB p₀ L θ * log (p₀ θ * exp (-L θ) / Z p₀ L) - qB p₀ L θ * log (p₀ θ) := rfl
+    _ = qB p₀ L θ * log (p₀ θ) + qB p₀ L θ * (-L θ) + qB p₀ L θ * (-log (Z p₀ L))
+        - qB p₀ L θ * log (p₀ θ) := by
+      rw [log_div (mul_pos hppos (exp_pos _)).ne' hZ.ne',
+        log_mul hppos.ne' (exp_pos _).ne', log_exp]
+      ring
+    _ = qB p₀ L θ * (-L θ - log (Z p₀ L)) := by ring
 
 lemma admissible_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
