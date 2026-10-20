@@ -253,11 +253,61 @@ lemma mul_log_div_qB_p₀ {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
       ring
     _ = qB p₀ L θ * (-L θ - log (Z p₀ L)) := by ring
 
+/-- A measurable function `f` with `0 ≤ f ≤ p₀` is integrable. -/
+lemma integrable_of_le_density {p₀ f : Θ → ℝ} (hp₀ : IsDensity p₀) (hf : Measurable f)
+    (h0 : ∀ θ, 0 ≤ f θ) (hle : ∀ θ, f θ ≤ p₀ θ) : Integrable f := by
+  refine hp₀.int.mono hf.aestronglyMeasurable (Filter.Eventually.of_forall fun θ ↦ ?_)
+  rw [Real.norm_of_nonneg (h0 θ), Real.norm_of_nonneg (hp₀.nonneg θ)]
+  exact hle θ
+
+lemma integrable_Z_integrand_mul_L {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+    Integrable (fun θ ↦ p₀ θ * exp (-L θ) * L θ) := by
+  have hupper : ∀ θ, p₀ θ * exp (-L θ) * L θ ≤ p₀ θ := by
+    intro θ
+    have hp := hp₀.nonneg θ
+    have hLexp : L θ * exp (-L θ) ≤ 1 := by
+      have h1 : L θ ≤ exp (L θ) := by linarith [Real.add_one_le_exp (L θ)]
+      calc
+        L θ * exp (-L θ) ≤ exp (L θ) * exp (-L θ) := by gcongr
+        _ = 1 := by rw [← Real.exp_add]; simp
+    calc
+      p₀ θ * exp (-L θ) * L θ = p₀ θ * (L θ * exp (-L θ)) := by ring
+      _ ≤ p₀ θ * 1 := by gcongr
+      _ = p₀ θ := mul_one _
+  exact integrable_of_le_density hp₀ ((hp₀.meas.mul hL.neg.exp).mul hL)
+    (fun θ ↦ mul_nonneg (mul_nonneg (hp₀.nonneg θ) (exp_pos _).le) (hL0 θ)) hupper
+
+lemma integrable_qB_mul_L {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
+    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+    Integrable (fun θ ↦ qB p₀ L θ * L θ) := by
+  have h : (fun θ ↦ qB p₀ L θ * L θ) = fun θ ↦ p₀ θ * exp (-L θ) * L θ / Z p₀ L := by
+    funext θ
+    unfold qB
+    ring
+  rw [h]
+  exact (integrable_Z_integrand_mul_L hp₀ hL hL0).div_const _
+
 lemma admissible_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
-    Admissible p₀ L (qB p₀ L) := by
-  sorry
-
+    Admissible p₀ L (qB p₀ L) where
+  dens := isDensity_qB hp₀ hL hL0
+  supp := by
+    refine Filter.Eventually.of_forall (fun θ ↦ ?_)
+    intro hθ
+    unfold qB
+    rw [hθ]
+    simp
+  intL := integrable_qB_mul_L hp₀ hL hL0
+  intKL := by
+    have hq := isDensity_qB hp₀ hL hL0
+    have h : (fun θ ↦ qB p₀ L θ * log (qB p₀ L θ / p₀ θ))
+      = fun θ ↦ -(qB p₀ L θ * L θ) - qB p₀ L θ * log (Z p₀ L) := by
+      funext θ
+      rw [mul_log_div_qB_p₀ hp₀ hL hL0 θ]
+      ring
+    rw [h]
+    exact (integrable_qB_mul_L hp₀ hL hL0).neg.sub (hq.int.mul_const _)
 
 /-! 5. Key identities -/
 
