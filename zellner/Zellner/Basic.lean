@@ -140,6 +140,13 @@ lemma ae_eq_of_kl_eq_zero {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity 
 
 /-! 3. Normalizing constant Z -/
 
+/-- A measurable function `f` with `0 ≤ f ≤ p₀` is integrable. -/
+lemma integrable_of_le_density {p₀ f : Θ → ℝ} (hp₀ : IsDensity p₀) (hf : Measurable f)
+    (h0 : ∀ θ, 0 ≤ f θ) (hle : ∀ θ, f θ ≤ p₀ θ) : Integrable f := by
+  refine hp₀.int.mono hf.aestronglyMeasurable (Filter.Eventually.of_forall fun θ ↦ ?_)
+  rw [Real.norm_of_nonneg (h0 θ), Real.norm_of_nonneg (hp₀.nonneg θ)]
+  exact hle θ
+
 lemma integrable_Z_integrand {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
     Integrable (fun θ ↦ p₀ θ * exp (-L θ)) := by
@@ -150,15 +157,8 @@ lemma integrable_Z_integrand {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
       have hexp : exp (-L θ) ≤ 1 := Real.exp_le_one_iff.mpr (neg_nonpos.mpr (hL0 θ))
       exact mul_le_mul_of_nonneg_left hexp (hp₀.nonneg θ)
     _ = p₀ θ := by norm_num
-  refine hp₀.int.mono ?_ ?_
-  · -- measurability
-    exact (hp₀.meas.mul hL.neg.exp).aestronglyMeasurable
-  · -- norm evaluation
-    refine Filter.Eventually.of_forall (fun θ ↦ ?_)
-    change ‖p₀ θ * exp (-L θ)‖ ≤ ‖p₀ θ‖
-    have h0 : 0 ≤ p₀ θ * exp (-L θ) := mul_nonneg (hp₀.nonneg θ) (exp_pos _).le
-    rw [Real.norm_of_nonneg h0, Real.norm_of_nonneg (hp₀.nonneg θ)]
-    exact hupper θ
+  exact integrable_of_le_density hp₀ (hp₀.meas.mul hL.neg.exp)
+    (fun θ ↦ mul_nonneg (hp₀.nonneg θ) (exp_pos _).le) hupper
 
 lemma Z_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
@@ -243,13 +243,6 @@ lemma mul_log_div_qB_p₀ {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
         log_mul hppos.ne' (exp_pos _).ne', log_exp]
       ring
     _ = qB p₀ L θ * (-L θ - log (Z p₀ L)) := by ring
-
-/-- A measurable function `f` with `0 ≤ f ≤ p₀` is integrable. -/
-lemma integrable_of_le_density {p₀ f : Θ → ℝ} (hp₀ : IsDensity p₀) (hf : Measurable f)
-    (h0 : ∀ θ, 0 ≤ f θ) (hle : ∀ θ, f θ ≤ p₀ θ) : Integrable f := by
-  refine hp₀.int.mono hf.aestronglyMeasurable (Filter.Eventually.of_forall fun θ ↦ ?_)
-  rw [Real.norm_of_nonneg (h0 θ), Real.norm_of_nonneg (hp₀.nonneg θ)]
-  exact hle θ
 
 lemma integrable_Z_integrand_mul_L {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
