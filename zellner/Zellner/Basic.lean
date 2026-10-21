@@ -1,6 +1,18 @@
 import Mathlib
 
-/-! formalization of Theorem 1 in https://arxiv.org/abs/1904.02063 -/
+/-!
+Formalization of Theorem 1 in Knoblauch, Jewson, and Damoulas (2019),
+https://arxiv.org/abs/1904.02063.
+
+As in the paper, we only assume `Z < ∞`, i.e. that `p₀ e^{-L}` is integrable.
+
+The objective `E_q[L] + KL(q ‖ p₀)` is written as the single integral
+`∫ q (L + log (q / p₀))`, as in the paper's proof. This agrees with the paper whenever
+`E_q[L]` and `KL(q ‖ p₀)` are both finite, and stays well defined at `qB` even when
+`E_{qB}[L] = -∞`. The negative part of the integrand is always integrable, so a `q`
+whose integrand is not integrable has objective `+∞` and is excluded from `Admissible`
+without loss.
+-/
 
 open MeasureTheory Real
 
@@ -20,13 +32,13 @@ so this is only meaningful when `q = 0` almost everywhere on `{p = 0}`. -/
 noncomputable def kl (q p : Θ → ℝ) : ℝ := ∫ θ, q θ * log (q θ / p θ)
 
 structure Admissible (p₀ L q : Θ → ℝ) : Prop where
-  dens  : IsDensity q
-  supp  : ∀ᵐ θ, p₀ θ = 0 → q θ = 0
-  intL  : Integrable (fun θ ↦ q θ * L θ)
-  intKL : Integrable (fun θ ↦ q θ * log (q θ / p₀ θ))
+  dens : IsDensity q
+  supp : ∀ᵐ θ, p₀ θ = 0 → q θ = 0
+  int  : Integrable (fun θ ↦ q θ * (L θ + log (q θ / p₀ θ)))
 
+/-- `E_q[L] + KL(q ‖ p₀)`, written as a single integral -/
 noncomputable def objective (p₀ L q : Θ → ℝ) : ℝ :=
-  (∫ θ, q θ * L θ) + kl q p₀
+  ∫ θ, q θ * (L θ + log (q θ / p₀ θ))
 
 noncomputable def Z (p₀ L : Θ → ℝ) : ℝ := ∫ θ, p₀ θ * exp (-L θ)
 noncomputable def qB (p₀ L : Θ → ℝ) (θ : Θ) : ℝ := p₀ θ * exp (-L θ) / Z p₀ L
@@ -51,7 +63,6 @@ lemma sub_le_mul_log_div {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 < a �
       _ = a * log (a / b) := by
         rw [Real.log_div hbpos.ne' hapos.ne', Real.log_div hapos.ne' hbpos.ne']
         ring
-
 
 lemma mul_log_div_eq_sub_iff {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 < a → 0 < b) :
     a * log (a / b) = a - b ↔ a = b := by
@@ -89,7 +100,6 @@ lemma mul_log_div_eq_sub_iff {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 < 
     by_cases hb0 : b = 0
     · simp [hb0]
     · rw [div_self hb0, Real.log_one, mul_zero, sub_self]
-
 
 /-! 2. Gibbs's inequality on pdf -/
 
@@ -137,33 +147,11 @@ lemma ae_eq_of_kl_eq_zero {q r : Θ → ℝ} (hq : IsDensity q) (hr : IsDensity 
   have h2 : q θ * log (q θ / r θ) = q θ - r θ := by linarith
   exact (mul_log_div_eq_sub_iff (hq.nonneg θ) (hr.nonneg θ) hθs).mp h2
 
-
 /-! 3. Normalizing constant Z -/
 
-/-- A measurable function `f` with `0 ≤ f ≤ p₀` is integrable. -/
-lemma integrable_of_le_density {p₀ f : Θ → ℝ} (hp₀ : IsDensity p₀) (hf : Measurable f)
-    (h0 : ∀ θ, 0 ≤ f θ) (hle : ∀ θ, f θ ≤ p₀ θ) : Integrable f := by
-  refine hp₀.int.mono hf.aestronglyMeasurable (Filter.Eventually.of_forall fun θ ↦ ?_)
-  rw [Real.norm_of_nonneg (h0 θ), Real.norm_of_nonneg (hp₀.nonneg θ)]
-  exact hle θ
-
-lemma integrable_Z_integrand {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
-    Integrable (fun θ ↦ p₀ θ * exp (-L θ)) := by
-  have hupper : ∀ θ, p₀ θ * exp (-L θ) ≤ p₀ θ := by
-    intro θ
-    calc p₀ θ * exp (-L θ)
-    _ ≤ p₀ θ * 1 := by
-      have hexp : exp (-L θ) ≤ 1 := Real.exp_le_one_iff.mpr (neg_nonpos.mpr (hL0 θ))
-      exact mul_le_mul_of_nonneg_left hexp (hp₀.nonneg θ)
-    _ = p₀ θ := by norm_num
-  exact integrable_of_le_density hp₀ (hp₀.meas.mul hL.neg.exp)
-    (fun θ ↦ mul_nonneg (hp₀.nonneg θ) (exp_pos _).le) hupper
-
 lemma Z_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+    (hZint : Integrable (fun θ ↦ p₀ θ * exp (-L θ))) :
     0 < Z p₀ L := by
-  have hint := integrable_Z_integrand hp₀ hL hL0
   have hnonneg : ∀ᵐ θ, 0 ≤ p₀ θ * exp (-L θ) :=
     Filter.Eventually.of_forall fun θ ↦ mul_nonneg (hp₀.nonneg θ) (exp_pos _).le
   have hZ0 : 0 ≤ Z p₀ L := integral_nonneg_of_ae hnonneg
@@ -171,7 +159,7 @@ lemma Z_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
   · -- case Z = 0; derive a contradiction
     exfalso
     have hzero : (fun θ ↦ p₀ θ * exp (-L θ)) =ᵐ[volume] 0 :=
-      (integral_eq_zero_iff_of_nonneg_ae hnonneg hint).mp h0.symm
+      (integral_eq_zero_iff_of_nonneg_ae hnonneg hZint).mp h0.symm
     have hp0 : p₀ =ᵐ[volume] 0 := by
       filter_upwards [hzero] with θ hθ
       have h1 : p₀ θ * exp (-L θ) = 0 := hθ
@@ -179,58 +167,58 @@ lemma Z_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     have hone := hp₀.one
     rw [integral_congr_ae hp0] at hone
     simp at hone  -- 0 = 1; contradiction
-  · --case Z > 0
+  · -- case Z > 0
     exact hpos
 
 /-! 4. Generalized posterior qB -/
 
 lemma qB_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) {θ : Θ} (hθ : 0 < p₀ θ) :
+    (hZint : Integrable (fun θ ↦ p₀ θ * exp (-L θ))) {θ : Θ} (hθ : 0 < p₀ θ) :
     0 < qB p₀ L θ := by
   rw [qB]
-  exact div_pos (mul_pos hθ (exp_pos _)) (Z_pos hp₀ hL hL0)
+  exact div_pos (mul_pos hθ (exp_pos _)) (Z_pos hp₀ hZint)
 
 lemma supp_qB {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
+    (hZint : Integrable (fun θ ↦ p₀ θ * exp (-L θ))) (hq : Admissible p₀ L q) :
     ∀ᵐ θ, 0 < q θ → 0 < qB p₀ L θ := by
   filter_upwards [hq.supp] with θ hθs
   intro hqpos
   have hθ : 0 < p₀ θ := by
     rcases (hp₀.nonneg θ).eq_or_lt with hp0 | hppos
-    · -- case p₀ = 0
+    · -- case p₀ θ = 0
       apply absurd (hθs hp0.symm) hqpos.ne'
-    · -- case p₀ > 0
+    · -- case p₀ θ > 0
       exact hppos
-  exact qB_pos hp₀ hL hL0 hθ
+  exact qB_pos hp₀ hZint hθ
 
 lemma isDensity_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+    (hL : Measurable L) (hZint : Integrable (fun θ ↦ p₀ θ * exp (-L θ))) :
     IsDensity (qB p₀ L) where
   meas := (hp₀.meas.mul hL.neg.exp).div_const _
   nonneg := by
     intro θ
-    have hZ : 0 < Z p₀ L := Z_pos hp₀ hL hL0
+    have hZ : 0 < Z p₀ L := Z_pos hp₀ hZint
     have hp : 0 ≤ p₀ θ := hp₀.nonneg θ
     unfold qB
     positivity
-  int := (integrable_Z_integrand hp₀ hL hL0).div_const _
+  int := hZint.div_const _
   one := by
-    have hZ := Z_pos hp₀ hL hL0
+    have hZ := Z_pos hp₀ hZint
     unfold qB
     rw [integral_div, div_eq_one_iff_eq hZ.ne']
     rfl
 
 lemma mul_log_div_qB_p₀ {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (θ : Θ) :
+    (hZint : Integrable (fun θ ↦ p₀ θ * exp (-L θ))) (θ : Θ) :
     qB p₀ L θ * log (qB p₀ L θ / p₀ θ) = qB p₀ L θ * (-L θ - log (Z p₀ L)) := by
   rcases (hp₀.nonneg θ).eq_or_lt with hp0 | hppos
-  · -- case p₀ = 0
+  · -- case p₀ θ = 0
     unfold qB
     rw [← hp0]
     norm_num
-  -- case p₀ > 0
-  have hZ := Z_pos hp₀ hL hL0
-  have hqB := qB_pos hp₀ hL hL0 hppos
+  -- case p₀ θ > 0
+  have hZ := Z_pos hp₀ hZint
+  have hqB := qB_pos hp₀ hZint hppos
   calc
     qB p₀ L θ * log (qB p₀ L θ / p₀ θ)
     _ = qB p₀ L θ * log (qB p₀ L θ) - qB p₀ L θ * log (p₀ θ) := by
@@ -244,61 +232,32 @@ lemma mul_log_div_qB_p₀ {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
       ring
     _ = qB p₀ L θ * (-L θ - log (Z p₀ L)) := by ring
 
-lemma integrable_Z_integrand_mul_L {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
-    Integrable (fun θ ↦ p₀ θ * exp (-L θ) * L θ) := by
-  have hupper : ∀ θ, p₀ θ * exp (-L θ) * L θ ≤ p₀ θ := by
-    intro θ
-    have hp := hp₀.nonneg θ
-    have hLexp : L θ * exp (-L θ) ≤ 1 := by
-      have h1 : L θ ≤ exp (L θ) := by linarith [Real.add_one_le_exp (L θ)]
-      calc
-        L θ * exp (-L θ) ≤ exp (L θ) * exp (-L θ) := by gcongr
-        _ = 1 := by rw [← Real.exp_add]; simp
-    calc
-      p₀ θ * exp (-L θ) * L θ = p₀ θ * (L θ * exp (-L θ)) := by ring
-      _ ≤ p₀ θ * 1 := by gcongr
-      _ = p₀ θ := mul_one _
-  exact integrable_of_le_density hp₀ ((hp₀.meas.mul hL.neg.exp).mul hL)
-    (fun θ ↦ mul_nonneg (mul_nonneg (hp₀.nonneg θ) (exp_pos _).le) (hL0 θ)) hupper
-
-lemma integrable_qB_mul_L {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
-    Integrable (fun θ ↦ qB p₀ L θ * L θ) := by
-  have h : (fun θ ↦ qB p₀ L θ * L θ) = fun θ ↦ p₀ θ * exp (-L θ) * L θ / Z p₀ L := by
-    funext θ
-    unfold qB
-    ring
-  rw [h]
-  exact (integrable_Z_integrand_mul_L hp₀ hL hL0).div_const _
-
-lemma admissible_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+lemma admissible_qB {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀) (hL : Measurable L)
+    (hZint : Integrable (fun θ ↦ p₀ θ * exp (-L θ))) :
     Admissible p₀ L (qB p₀ L) where
-  dens := isDensity_qB hp₀ hL hL0
+  dens := isDensity_qB hp₀ hL hZint
   supp := by
     refine Filter.Eventually.of_forall (fun θ ↦ ?_)
     intro hθ
     unfold qB
     rw [hθ]
     simp
-  intL := integrable_qB_mul_L hp₀ hL hL0
-  intKL := by
-    have hq := isDensity_qB hp₀ hL hL0
-    have h : (fun θ ↦ qB p₀ L θ * log (qB p₀ L θ / p₀ θ))
-      = fun θ ↦ -(qB p₀ L θ * L θ) - qB p₀ L θ * log (Z p₀ L) := by
+  int := by
+    have hq := isDensity_qB hp₀ hL hZint
+    have h : (fun θ ↦ qB p₀ L θ * (L θ + log (qB p₀ L θ / p₀ θ)))
+        = fun θ ↦ -(qB p₀ L θ * log (Z p₀ L)) := by
       funext θ
-      rw [mul_log_div_qB_p₀ hp₀ hL hL0 θ]
+      rw [mul_add, mul_log_div_qB_p₀ hp₀ hZint θ]
       ring
     rw [h]
-    exact (integrable_qB_mul_L hp₀ hL hL0).neg.sub (hq.int.mul_const _)
+    exact (hq.int.mul_const _).neg
 
 /-! 5. Key identities -/
 
 lemma mul_log_div_qB_ae {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
+    (hZint : Integrable (fun θ ↦ p₀ θ * exp (-L θ))) (hq : Admissible p₀ L q) :
     (fun θ ↦ q θ * log (q θ / qB p₀ L θ)) =ᵐ[volume]
-      fun θ ↦ q θ * log (q θ / p₀ θ) + q θ * L θ + q θ * log (Z p₀ L) := by
+      fun θ ↦ q θ * (L θ + log (q θ / p₀ θ)) + q θ * log (Z p₀ L) := by
   filter_upwards [hq.supp] with θ hθs
   rcases (hq.dens.nonneg θ).eq_or_lt with hq0 | hqpos
   · -- case q θ = 0
@@ -311,8 +270,8 @@ lemma mul_log_div_qB_ae {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
       exact absurd (hθs hpz.symm) hqpos.ne'
     · -- case p₀ θ > 0
       exact hppos
-  have hZ := Z_pos hp₀ hL hL0
-  have hqB := qB_pos hp₀ hL hL0 hppos
+  have hZ := Z_pos hp₀ hZint
+  have hqB := qB_pos hp₀ hZint hppos
   calc
     q θ * log (q θ / qB p₀ L θ)
     _ = q θ * log (q θ) - q θ * log (qB p₀ L θ) := by rw [log_div hqpos.ne' hqB.ne']; ring
@@ -321,53 +280,50 @@ lemma mul_log_div_qB_ae {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
       rw [log_div (mul_pos hppos (exp_pos _)).ne' hZ.ne',
         log_mul hppos.ne' (exp_pos _).ne', log_exp]
       ring
-    _ = q θ * log (q θ / p₀ θ) + q θ * L θ + q θ * log (Z p₀ L) := by
+    _ = q θ * (L θ + log (q θ / p₀ θ)) + q θ * log (Z p₀ L) := by
       rw [log_div hqpos.ne' hppos.ne']
       ring
 
 lemma integrable_mul_log_div_qB {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
+    (hZint : Integrable (fun θ ↦ p₀ θ * exp (-L θ))) (hq : Admissible p₀ L q) :
     Integrable (fun θ ↦ q θ * log (q θ / qB p₀ L θ)) := by
-  have h := mul_log_div_qB_ae hp₀ hL hL0 hq
-  have hint : Integrable (fun θ ↦ q θ * log (q θ / p₀ θ) + q θ * L θ + q θ * log (Z p₀ L)) :=
-    (hq.intKL.add hq.intL).add (hq.dens.int.mul_const _)
+  have h := mul_log_div_qB_ae hp₀ hZint hq
+  have hint : Integrable (fun θ ↦ q θ * (L θ + log (q θ / p₀ θ)) + q θ * log (Z p₀ L)) :=
+    hq.int.add (hq.dens.int.mul_const _)
   exact hint.congr h.symm
 
 lemma objective_eq {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
+    (hZint : Integrable (fun θ ↦ p₀ θ * exp (-L θ))) (hq : Admissible p₀ L q) :
     objective p₀ L q = kl q (qB p₀ L) - log (Z p₀ L) := by
   unfold objective kl
-  rw [integral_congr_ae (mul_log_div_qB_ae hp₀ hL hL0 hq)]
-  have hint1 : Integrable (fun θ ↦ q θ * log (q θ / p₀ θ) + q θ * L θ) :=
-    hq.intKL.add hq.intL
-  rw [integral_add hint1 (hq.dens.int.mul_const (log (Z p₀ L))), integral_add hq.intKL hq.intL,
-    integral_mul_const, hq.dens.one]
+  rw [integral_congr_ae (mul_log_div_qB_ae hp₀ hZint hq),
+    integral_add hq.int (hq.dens.int.mul_const (log (Z p₀ L))), integral_mul_const,
+    hq.dens.one]
   ring
-
 
 /-! Main theorem -/
 
 theorem gibbs_bayes_density
     (p₀ L : Θ → ℝ) (hp₀ : IsDensity p₀)
-    (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) :
+    (hL : Measurable L) (hZint : Integrable (fun θ ↦ p₀ θ * exp (-L θ))) :
     Admissible p₀ L (qB p₀ L) ∧
     (∀ q, Admissible p₀ L q → objective p₀ L (qB p₀ L) ≤ objective p₀ L q) ∧
     (∀ q, Admissible p₀ L q → objective p₀ L q = objective p₀ L (qB p₀ L) →
       ∀ᵐ θ, q θ = qB p₀ L θ) := by
-  have hB : Admissible p₀ L (qB p₀ L) := admissible_qB hp₀ hL hL0
+  have hB : Admissible p₀ L (qB p₀ L) := admissible_qB hp₀ hL hZint
   have hobjB : objective p₀ L (qB p₀ L) = -log (Z p₀ L) := by
-    rw [objective_eq hp₀ hL hL0 hB, kl_self, zero_sub]
+    rw [objective_eq hp₀ hZint hB, kl_self, zero_sub]
   -- achieve the first goal
   refine ⟨hB, ?_, ?_⟩
   · -- optimality of q = qB: objective q = kl q qB - log Z ≥ kl qB qB - log Z = - log Z
     intro q hq
-    rw [hobjB, objective_eq hp₀ hL hL0 hq]
-    have hkl := kl_nonneg hq.dens (isDensity_qB hp₀ hL hL0)
-      (supp_qB hp₀ hL hL0 hq) (integrable_mul_log_div_qB hp₀ hL hL0 hq)
+    rw [hobjB, objective_eq hp₀ hZint hq]
+    have hkl := kl_nonneg hq.dens (isDensity_qB hp₀ hL hZint)
+      (supp_qB hp₀ hZint hq) (integrable_mul_log_div_qB hp₀ hZint hq)
     linarith
   · -- uniqueness of optimal q
     intro q hq heq
-    rw [hobjB, objective_eq hp₀ hL hL0 hq] at heq
-    apply ae_eq_of_kl_eq_zero hq.dens (isDensity_qB hp₀ hL hL0)
-      (supp_qB hp₀ hL hL0 hq) (integrable_mul_log_div_qB hp₀ hL hL0 hq)
+    rw [hobjB, objective_eq hp₀ hZint hq] at heq
+    apply ae_eq_of_kl_eq_zero hq.dens (isDensity_qB hp₀ hL hZint)
+      (supp_qB hp₀ hZint hq) (integrable_mul_log_div_qB hp₀ hZint hq)
     linarith
