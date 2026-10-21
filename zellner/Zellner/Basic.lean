@@ -184,15 +184,6 @@ lemma Z_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
 
 /-! 4. Generalized posterior qB -/
 
--- lemma qB_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
---     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) {θ : Θ} (hθ : 0 < p₀ θ) :
---     0 < qB p₀ L θ := by
---   rw [qB]
---   have hZ : 0 < Z p₀ L := Z_pos hp₀ hL hL0
---   have hi : 0 < p₀ θ * exp (-L θ) := mul_pos hθ (exp_pos _)
---   rw [← zero_div (Z p₀ L)]
---   apply div_lt_div_of_pos_right hi hZ
-
 lemma qB_pos {p₀ L : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) {θ : Θ} (hθ : 0 < p₀ θ) :
     0 < qB p₀ L θ := by
