@@ -344,7 +344,10 @@ lemma mul_log_div_qB_ae {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
 lemma integrable_mul_log_div_qB {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
     Integrable (fun θ ↦ q θ * log (q θ / qB p₀ L θ)) := by
-  sorry
+  have h := mul_log_div_qB_ae hp₀ hL hL0 hq
+  have hint : Integrable (fun θ ↦ q θ * log (q θ / p₀ θ) + q θ * L θ + q θ * log (Z p₀ L)) :=
+    (hq.intKL.add hq.intL).add (hq.dens.int.mul_const _)
+  exact hint.congr h.symm
 
 lemma objective_eq {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
