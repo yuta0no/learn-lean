@@ -315,7 +315,31 @@ lemma mul_log_div_qB_ae {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
     (fun θ ↦ q θ * log (q θ / qB p₀ L θ)) =ᵐ[volume]
       fun θ ↦ q θ * log (q θ / p₀ θ) + q θ * L θ + q θ * log (Z p₀ L) := by
-  sorry
+  filter_upwards [hq.supp] with θ hθs
+  rcases (hq.dens.nonneg θ).eq_or_lt with hq0 | hqpos
+  · -- case q θ = 0
+    rw [← hq0]
+    simp
+  -- case q θ > 0
+  have hppos : 0 < p₀ θ := by
+    rcases (hp₀.nonneg θ).eq_or_lt with hpz | hppos
+    · -- case p₀ θ = 0
+      exact absurd (hθs hpz.symm) hqpos.ne'
+    · -- case p₀ θ > 0
+      exact hppos
+  have hZ := Z_pos hp₀ hL hL0
+  have hqB := qB_pos hp₀ hL hL0 hppos
+  calc
+    q θ * log (q θ / qB p₀ L θ)
+    _ = q θ * log (q θ) - q θ * log (qB p₀ L θ) := by rw [log_div hqpos.ne' hqB.ne']; ring
+    _ = q θ * log (q θ) - q θ * log (p₀ θ * exp (-L θ) / Z p₀ L) := by rw [qB]
+    _ = q θ * log (q θ) - q θ * log (p₀ θ) + q θ * L θ + q θ * log (Z p₀ L) := by
+      rw [log_div (mul_pos hppos (exp_pos _)).ne' hZ.ne',
+        log_mul hppos.ne' (exp_pos _).ne', log_exp]
+      ring
+    _ = q θ * log (q θ / p₀ θ) + q θ * L θ + q θ * log (Z p₀ L) := by
+      rw [log_div hqpos.ne' hppos.ne']
+      ring
 
 lemma integrable_mul_log_div_qB {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
