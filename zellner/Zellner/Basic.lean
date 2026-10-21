@@ -352,7 +352,13 @@ lemma integrable_mul_log_div_qB {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
 lemma objective_eq {p₀ L q : Θ → ℝ} (hp₀ : IsDensity p₀)
     (hL : Measurable L) (hL0 : ∀ θ, 0 ≤ L θ) (hq : Admissible p₀ L q) :
     objective p₀ L q = kl q (qB p₀ L) - log (Z p₀ L) := by
-  sorry
+  unfold objective kl
+  rw [integral_congr_ae (mul_log_div_qB_ae hp₀ hL hL0 hq)]
+  have hint1 : Integrable (fun θ ↦ q θ * log (q θ / p₀ θ) + q θ * L θ) :=
+    hq.intKL.add hq.intL
+  rw [integral_add hint1 (hq.dens.int.mul_const (log (Z p₀ L))), integral_add hq.intKL hq.intL,
+    integral_mul_const, hq.dens.one]
+  ring
 
 
 /-! Main theorem -/
